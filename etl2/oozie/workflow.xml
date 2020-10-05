@@ -1,0 +1,192 @@
+<!--
+  Licensed to the Apache Software Foundation (ASF) under one
+  or more contributor license agreements.  See the NOTICE file
+  distributed with this work for additional information
+  regarding copyright ownership.  The ASF licenses this file
+  to you under the Apache License, Version 2.0 (the
+  "License"); you may not use this file except in compliance
+  with the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+<workflow-app xmlns="uri:oozie:workflow:0.2" name="ssh-wf">
+    <start to="ssh1"/>
+
+    <action name="ssh1">
+        <ssh xmlns="uri:oozie:ssh-action:0.1">
+            <host>op.hadoop</host>
+            <command>sh /home/zengqingyong17/etl/shell/txt2avrodata.sh</command>
+            <!--<args>"Hello Oozie!"</args>-->
+        </ssh>
+        <ok to="ssh2"/>
+        <error to="fail_ssh1"/>
+    </action>
+	
+	 <action name="ssh2">
+        <ssh xmlns="uri:oozie:ssh-action:0.1">
+            <host>op.hadoop</host>
+            <command>sh /home/zengqingyong17/etl/shell/avrodata2avro.sh</command>
+            <!--<args>"Hello Oozie!"</args>-->
+        </ssh>
+        <ok to="forking"/>
+        <error to="fail_ssh2"/>
+    </action>
+
+	   <fork name="forking">
+        <path start="ssh3"/>
+        <path start="ssh7"/>
+    </fork>
+
+	
+	<action name="ssh3">
+        <ssh xmlns="uri:oozie:ssh-action:0.1">
+            <host>op.hadoop</host>
+            <command>sh /home/zengqingyong17/etl/shell/avrodata2orcdatahome.sh</command>
+            <!--<args>"Hello Oozie!"</args>-->
+        </ssh>
+        <ok to="ssh4"/>
+        <error to="fail_ssh3"/>
+    </action>
+
+
+
+	<action name="ssh4">
+        <ssh xmlns="uri:oozie:ssh-action:0.1">
+            <host>op.hadoop</host>
+            <command>sh /home/zengqingyong17/etl/shell/orcdatahome2orchome.sh</command>
+            <!--<args>"Hello Oozie!"</args>-->
+        </ssh>
+        <ok to="ssh5"/>
+        <error to="fail_ssh4"/>
+    </action>
+
+	<action name="ssh5">
+        <ssh xmlns="uri:oozie:ssh-action:0.1">
+            <host>op.hadoop</host>
+            <command>sh /home/zengqingyong17/etl/shell/orchome2localhome.sh</command>
+            <!--<args>"Hello Oozie!"</args>-->
+        </ssh>
+        <ok to="ssh6"/>
+        <error to="fail_ssh5"/>
+    </action>
+
+
+
+    <action name="ssh6">
+        <ssh xmlns="uri:oozie:ssh-action:0.1">
+            <host>op.hadoop</host>
+            <command>sh /home/zengqingyong17/etl/shell/localhome2mysql.sh</command>
+            <!--<args>"Hello Oozie!"</args>-->
+        </ssh>
+        <ok to="joining"/>
+        <error to="fail_ssh6"/>
+    </action>
+
+
+	
+
+	<action name="ssh7">
+        <ssh xmlns="uri:oozie:ssh-action:0.1">
+            <host>op.hadoop</host>
+            <command>sh /home/zengqingyong17/etl/shell/avrodata2orcdatatopic.sh</command>
+            <!--<args>"Hello Oozie!"</args>-->
+        </ssh>
+        <ok to="ssh8"/>
+        <error to="fail_ssh7"/>
+    </action>
+
+
+
+    <action name="ssh8">
+        <ssh xmlns="uri:oozie:ssh-action:0.1">
+            <host>op.hadoop</host>
+            <command>sh /home/zengqingyong17/etl/shell/orcdatatopic2orctopic.sh</command>
+            <!--<args>"Hello Oozie!"</args>-->
+        </ssh>
+        <ok to="ssh9"/>
+        <error to="fail_ssh8"/>
+    </action>
+
+	 <action name="ssh9">
+        <ssh xmlns="uri:oozie:ssh-action:0.1">
+            <host>op.hadoop</host>
+            <command>sh /home/zengqingyong17/etl/shell/orctopic2localtopic.sh</command>
+            <!--<args>"Hello Oozie!"</args>-->
+        </ssh>
+        <ok to="ssh10"/>
+        <error to="fail_ssh9"/>
+    </action>
+
+
+
+    <action name="ssh10">
+        <ssh xmlns="uri:oozie:ssh-action:0.1">
+            <host>op.hadoop</host>
+            <command>sh /home/zengqingyong17/etl/shell/localtopic2mysql.sh</command>
+            <!--<args>"Hello Oozie!"</args>-->
+        </ssh>
+        <ok to="joining"/>
+        <error to="fail_ssh10"/>
+    </action>	
+
+
+
+	  <join name="joining" to="end"/>
+
+
+		
+    <kill name="fail_ssh1">
+        <message>txt2avrodata.sh action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+
+	 <kill name="fail_ssh2">
+        <message>avrodata2avro.sh action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+
+	<kill name="fail_ssh3">
+        <message>avrodata2orcdatahome.sh action failed, error message[${wf:errorMessage(wf:lastErrorNode())}]</message>
+    </kill>
+
+	<kill name="fail_ssh4">
+        <message>orcdatahome2orchome.sh action failed, error message[${wf:errorMessage(wf:lastErrorN
+ode())}]</message>
+    </kill>
+
+	<kill name="fail_ssh5">
+        <message>orchome2localhome.sh action failed, error message[${wf:errorMessage(wf:lastErrorN
+ode())}]</message>
+    </kill>
+
+	<kill name="fail_ssh6">
+        <message>localhome2mysql.sh action failed, error message[${wf:errorMessage(wf:lastErrorN
+ode())}]</message>
+    </kill>
+
+
+    <kill name="fail_ssh7">
+        <message>avrodata2orcdatatopic.sh action failed, error message[${wf:errorMessage(wf:lastErrorN
+ode())}]</message>
+    </kill>
+
+    <kill name="fail_ssh8">
+        <message>orcdatatopic2orctopic.sh action failed, error message[${wf:errorMessage(wf:lastErrorN
+ode())}]</message>
+    </kill>
+	<kill name="fail_ssh9">
+        <message>orctopic2localtopic.sh action failed, error message[${wf:errorMessage(wf:lastErrorN
+ode())}]</message>
+    </kill>
+
+    <kill name="fail_ssh10">
+        <message>localtopic2mysql.sh action failed, error message[${wf:errorMessage(wf:lastErrorN
+ode())}]</message>
+    </kill>
+
+    <end name="end"/>
+</workflow-app>

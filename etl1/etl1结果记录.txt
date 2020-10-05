@@ -1,0 +1,188 @@
+192.168.235.140-04/Nov/2019:23:41:09 +0800
+"GET /?uid=24c4f085de60d7c0c6ea3fc6bca28a9b&country=RU HTTP/1.1"
+200555"http://www.google.cn"
+"Mozilla/5.0 (Windows NT 10.0; WOW64; Trident/7.0; .NET4.0C; .NET4.0E; .NET CLR 2.0.50727; .NET CLR 3.0.30729; .NET CLR 3.5.30729; rv:11.0) like Gecko""-"
+
+
+
+
+
+CREATE EXTERNAL  TABLE IF NOT EXISTS etl1_avro
+PARTITIONED BY (`month` string, `day` string)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
+WITH SERDEPROPERTIES ('avro.schema.url'='/tmp/schema/etl_avro.txt')
+STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
+OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
+LOCATION '/etltable/etl1_avro';
+
+
+
+create EXTERNAL table etl1_orc_country(
+country string,
+uptime bigint
+)
+PARTITIONED BY (`month` string, `day` string)  
+stored as orc 
+LOCATION '/etltable/etl1_orc_country';
+
+
+create EXTERNAL table etl1_orc_ip(
+ip string,
+uptime bigint
+)
+PARTITIONED BY (`month` string, `day` string)  
+stored as orc 
+LOCATION '/etltable/etl1_orc_ip';
+
+
+
+create table country(
+ `country` varchar(8) DEFAULT NULL
+  `uptime` bigint DEFAULT NULL 
+  `num bigint DEFAULT NULL 
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+create table ip(
+ `ip` varchar(8) DEFAULT NULL,
+  `uptime` bigint DEFAULT NULL ,
+  `num` bigint DEFAULT NULL 
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+mysqlDBUrl="/bin/mysql -hnn1.hadoop -p3306 -uroot -p000000 -Ddb_base"
+${mysqlDBUrl} <<EOF
+LOAD DATA LOCAL INFILE "${file1}" INTO TABLE country FIELDS TERMINATED BY '\t';
+EOF
+
+
+create EXTERNAL table etl1_orc_pv_uv (
+pv bigint,
+uv bigint,
+iv bigint
+)
+PARTITIONED BY (`month` string, `day` string)  
+stored as orc 
+LOCATION '/etltable/etl1_orc_pv_uv ';
+
+create EXTERNAL table etl1_orc_ip_time (
+ip string,
+uptime bigint
+)
+PARTITIONED BY (`month` string, `day` string)  
+stored as orc 
+LOCATION '/etltable/etl1_orc_ip_time';
+
+create EXTERNAL table etl1_orc(
+aip string,uid string,
+uptime long,country string,referer string,osfamily string,
+osname string,uafamily string,bversion string,devicetype string,
+uaname string,type string
+)
+PARTITIONED BY (`month` string, `day` string)  
+stored as orc 
+LOCATION '/etltable/etl1_orc';
+
+insert into table etl1_orc partition(month='201911',day='07') select count(*), count(distinct uid ),count(count aip) from etl1_avro
+
+ alter table etl_avro add partition(month='11',day='07')location '11/07';
+load data INPATH '/user/zz/task/output/etl_avro_zz/' overwrite into table etl_avro PARTITION (tmonth='11',day='07');
+
+CREATE TABLE IF NOT EXISTS etl_avro
+PARTITIONED BY (`month` string, `day` string)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
+WITH SERDEPROPERTIES ('avro.schema.url'=/home/hadoop/etldata/etl1/schema/etl_avro.txt')
+STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
+OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat';
+
+192.168.235.140 ff7f2c85af133d62c53b36a83edf0fd5        20191104230929  CN      "https://www.aol.com"   Windows Windows Mozilla rv:11.0 Personal computer       Mozilla rv:11.0 Browser 11      04
+192.168.235.140 ffbee273c7bb76bb2d279aa9f36a43c5        20191104233704  CN      "http://www.lycos.com"  Windows Windows Mozilla rv:11.0 Personal computer       Mozilla rv:11.0 Browser 11      04
+192.168.235.140 ffbfc1313c9c855a32f98d7c4374aabd        20191104232132  CN      "http://www.lycos.com"  Windows Windows Firefox 69.0    Personal computer       Firefox 69.0    Browser 11      04
+
+
+alter table etl_avro add partition(month='11',day='04')location '11/04';
+ select country,count(*) as num from etl_avro group by country order by num desc;
+country num
+CN      1289
+RU      337
+US      298
+TT      167
+MM      160
+
+ select aip,count(*) ipnum from etl_avro group by aip order by ipnum desc;
+aip     ipnum
+192.168.235.140 491
+192.168.235.139 474
+192.168.235.138 447
+192.168.235.136 421
+192.168.235.137 418
+
+select referer ,count(*) rnum from etl_avro group by referer order by rnum desc;
+referer rnum
+"http://www.lycos.com"  399
+"https://www.yahoo.com" 390
+"https://www.msn.cn/zh-cn"      371
+"http://www.google.cn"  370
+"https://www.aol.com"   361
+"https://www.baidu.com" 360
+
+select uptime,count(*) unum from etl_avro where uptime between 20191104222132 and 20191104232132 group by uptime order by unum desc limit 50;
+uptime  unum
+20191104230625  4
+20191104230123  4
+20191104230312  4
+20191104232115  4
+20191104231812  4
+20191104230152  4
+20191104231248  3
+20191104231240  3
+20191104232025  3
+20191104231124  3
+20191104231057  3
+20191104231011  3
+20191104231132  3
+20191104230911  3
+20191104230906  3
+20191104230852  3
+20191104230920  3
+20191104230719  3
+20191104230659  3
+20191104230607  3
+20191104230752  3
+20191104230534  3
+20191104230513  3
+20191104230419  3
+20191104230343  3
+20191104231839  3
+20191104231825  3
+20191104231718  3
+20191104230038  3
+20191104231510  3
+20191104231459  3
+20191104230232  3
+20191104230236  3
+20191104230209  3
+20191104230133  3
+20191104230137  3
+20191104230141  3
+20191104230500  3
+20191104231902  3
+20191104231701  3
+20191104231641  3
+20191104231233  3
+20191104231001  3
+20191104230757  3
+20191104230600  3
+20191104232056  3
+20191104230144  3
+20191104231305  3
+20191104232042  3
+20191104231203  3
+
+
+
+
+hive
+select coalesce(aip,'all'),coalesce(substring(uptime,1,8),'all'),count(*) from etl_avro group by aip,substring(uptime,1,8) with cube;
+

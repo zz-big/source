@@ -1,0 +1,1 @@
+{"type":"record","name":"etl_avro","namespace":"db1","fields":[{"name":"aip","type":["null","string"],"default":null},{"name":"uid","type":["null","string"],"default":null},{"name":"uptime","type":["null","long"],"default":null},{"name":"country","type":["null","string"],"default":null},{"name":"referer","type":["null","string"],"default":null}]}

@@ -1,0 +1,104 @@
+CREATE EXTERNAL  TABLE IF NOT EXISTS etl2_avro
+PARTITIONED BY (`month` string, `day` string)
+ROW FORMAT SERDE 'org.apache.hadoop.hive.serde2.avro.AvroSerDe'
+WITH SERDEPROPERTIES ('avro.schema.url'='/user/zengqingyong17/etl/schema/etl_avro.txt')
+STORED AS INPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerInputFormat'
+OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.avro.AvroContainerOutputFormat'
+LOCATION '/user/zengqingyong17/etl/table/etl2_avro';
+
+
+
+CREATE external TABLE etl2_orc_homepage(
+  `area` string , 
+  `time_local` string, 
+  `req_url` string, 
+  `url_describe` string, 
+  `who_req` string, 
+  `spider_type` string, 
+  `user_agent` string)
+PARTITIONED BY (`month` string, `day` string)
+STORED AS ORC 
+LOCATION '/user/zengqingyong17/etl/table/etl2_orc_homepage'
+TBLPROPERTIES (
+  'orc.compress'='SNAPPY', 
+  'orc.create.index'='true'); 
+
+
+CREATE external TABLE etl2_orc_topic(
+  `area` string , 
+  `time_local` string, 
+  `req_url` string, 
+  `who_req` string, 
+  `ua_type` string, 
+  `ua_name` string,
+  `spider_type` string)
+PARTITIONED BY (`month` string, `day` string)
+STORED AS ORC 
+LOCATION '/user/zengqingyong17/etl/table/etl2_orc_topic'
+TBLPROPERTIES (
+  'orc.compress'='SNAPPY', 
+  'orc.create.index'='true');  
+
+select COALESCE(substring(time_local,1,8),'ALL'), COALESCE(url_describe,'ALL'), COALESCE(area,'ALL'),COALESCE(spider_type,'ALL'), count(*) num from ${orc_name1} where month='${month}',day='${day}' group by url_describe, area, spider_type,substring(time_local,1,8) grouping sets ((url_describe, area),(url_describe,substring(time_local,1,8)),url_describe, area, spider_type,substring(time_local,1,8),()); 
+
+
+select COALESCE(substring(timeLocal,1,8),'ALL'),COALESCE(area,'ALL'), COALESCE(req_url,'ALL'),COALESCE(ua_type,'ALL'),COALESCE(ua_name,'ALL'),COALESCE(spider_type,'ALL'),count(*) num from ${orc_name2} where month='${month}' and day='${day}' group by area,substring(timeLocal,1,8), req_url, ua_type,ua_name,spider_type grouping sets ((area,spider_type,substring(timeLocal,1,8)),(area, substring(timeLocal,1,8)),(req_url,substring(timeLocal,1,8)),(ua_type,substring(timeLocal,1,8)),(ua_name,substring(timeLocal,1,8)),(spider_type,substring(timeLocal,1,8)), area,substring(timeLocal,1,8), req_url, ua_type,ua_name,spider_type);
+
+
+CREATE TABLE c17_g1_zz_homepagedata(
+  `time_local` varchar(14) DEFAULT NULL COMMENT '请求时间',
+  `url_describe` varchar(50) NOT NULL COMMENT 'url描述',
+  `area` varchar(30) NOT NULL COMMENT '请求ip区域',
+  `spider_type` varchar(50) NOT NULL COMMENT '爬虫类型',
+  `num` bigint(10) DEFAULT NULL COMMENT '数量'
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE c17_g1_zz_topicdata(
+  `time_local` varchar(14) DEFAULT NULL COMMENT '请求时间',
+  `area` varchar(30) NOT NULL COMMENT '请求ip区域',
+  `req_url` varchar(30) NOT NULL COMMENT '请求url',
+  `ua_type` varchar(30) NOT NULL COMMENT '浏览器类型',
+  `ua_name` varchar(30) NOT NULL COMMENT '浏览器名称',
+  `spider_type` varchar(50) NOT NULL COMMENT '爬虫类型',
+  `num` bigint(10) DEFAULT NULL COMMENT '数量'
+
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+
+
+
+-- 统计首页url访问量及占比
+select t1.url_describe, t1.sumn1, t2.sumn2, round(t1.sumn1/t2.sumn2,6) as percent  from 
+(select  url_describe, sum(num) sumn1, 'link' link from c17_g1_zz_homepagedata
+where time_local>='20191111' and time_local <='20191115' and url_describe != 'ALL'
+group by url_describe) t1 inner join 
+(select sum(num) sumn2, 'link' link from c17_g1_zz_homepagedata
+where time_local>='20191111' and time_local <='20191115'  and url_describe = 'ALL') t2 
+on t1.link = t2.link 
+order by percent desc;
+
+
+--统计爬虫种类，及访问占比
+select t1.spider_type, t1.sumn1, t2.sumn2, round(t1.sumn1/t2.sumn2,6) as percent  from 
+(select spider_type, sum(num) sumn1, 'link' link  from c17_g1_zz_topicdata
+where spider_type != 'ALL' and area = 'ALL' and req_url = 'ALL' and ua_type='ALL' and ua_name = 'ALL'
+group by spider_type) t1 inner join 
+
+(select sum(num) sumn2, 'link' link  from c17_g1_zz_topicdata
+where spider_type = 'ALL' and area = 'ALL' and req_url = 'ALL' and ua_type='ALL' and ua_name = 'ALL'
+group by spider_type ) t2 
+on t1.link = t2.link 
+order by percent desc;
+
+--每个地区的访问量，及访问占比
+select  t1.area, t1.snum1,t2.snum2,round(t1.snum1/t2.snum2,6) as percent from 
+(select area,sum(num) snum1, 'link'  link from c17_g1_zz_topicdata 
+where time_local>='${intStartTime}' and time_local<='${intEndTime}' and area !='ALL' and req_url ='ALL' and ua_type='ALL' and ua_name='ALL' and spider_type='用户请求' group by area) t1
+inner join 
+(select sum(num) snum2,'link'  link from c17_g1_zz_topicdata 
+where time_local>='${intStartTime}' and time_local<='${intEndTime}' and area ='ALL' and req_url ='ALL' and ua_type='ALL' and ua_name='ALL' and spider_type='用户请求' group by area)t2
+on t1.link=t2.link order by percent desc;
+
+
+
